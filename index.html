@@ -4,44 +4,145 @@
   <meta charset="UTF-8">
   <title>Registration Form</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    form { max-width: 400px; margin: auto; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
-    label { display: block; margin: 10px 0 5px; }
-    input { width: 100%; padding: 8px; margin-bottom: 10px; }
-    button { padding: 10px 15px; }
-    .error { color: red; }
-    .success { color: green; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f9ff;
+      margin: 20px;
+    }
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    form {
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      background: #fff;
+      border: 2px solid #3498db;
+      border-radius: 10px;
+      box-shadow: 0px 4px 8px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button {
+      padding: 12px 20px;
+      background: #3498db;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .error { color: red; font-weight: bold; }
+    .success { color: green; font-weight: bold; }
+    #userTable {
+      margin-top: 30px;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #userTable th, #userTable td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    #userTable th {
+      background: #3498db;
+      color: white;
+    }
   </style>
 </head>
 <body>
 
-  <h2>Registration Form</h2>
+  <h2>Student Registration</h2>
   <form id="regForm">
     <label for="name">Full Name</label>
     <input type="text" id="name" required>
 
     <label for="dob">Date of Birth</label>
     <input type="date" id="dob" required>
+    <p id="agePreview"></p>
+
+    <label for="gender">Gender</label>
+    <select id="gender" required>
+      <option value="">Select</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <label for="phone">Phone Number</label>
+    <input type="tel" id="phone" pattern="[0-9]{10}" placeholder="10-digit number" required>
 
     <label for="email">Email</label>
     <input type="email" id="email" required>
+
+    <label for="password">Password</label>
+    <input type="password" id="password" required>
+
+    <label for="confirmPassword">Confirm Password</label>
+    <input type="password" id="confirmPassword" required>
 
     <button type="submit">Register</button>
     <p id="msg"></p>
   </form>
 
+  <h2>Registered Users</h2>
+  <table id="userTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Age</th>
+        <th>Gender</th>
+        <th>Phone</th>
+        <th>Email</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
   <script>
     const form = document.getElementById("regForm");
     const msg = document.getElementById("msg");
+    const agePreview = document.getElementById("agePreview");
+    const tbody = document.querySelector("#userTable tbody");
+
+    document.getElementById("dob").addEventListener("change", () => {
+      const dob = new Date(document.getElementById("dob").value);
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+        age--;
+      }
+      agePreview.textContent = "Your Age: " + age;
+    });
 
     form.addEventListener("submit", function(e) {
       e.preventDefault();
 
       const name = document.getElementById("name").value.trim();
       const dob = new Date(document.getElementById("dob").value);
+      const gender = document.getElementById("gender").value;
+      const phone = document.getElementById("phone").value.trim();
       const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const confirmPassword = document.getElementById("confirmPassword").value;
 
-      // Calculate age
       const today = new Date();
       let age = today.getFullYear() - dob.getFullYear();
       const m = today.getMonth() - dob.getMonth();
@@ -55,28 +156,41 @@
         return;
       }
 
-      // Store data in localStorage
-      const user = { name, dob: dob.toISOString().split('T')[0], email, age };
-      localStorage.setItem("user", JSON.stringify(user));
+      if (password !== confirmPassword) {
+        msg.textContent = "Passwords do not match!";
+        msg.className = "error";
+        return;
+      }
+
+      const users = JSON.parse(localStorage.getItem("users")) || [];
+      users.push({ name, age, gender, phone, email });
+      localStorage.setItem("users", JSON.stringify(users));
 
       msg.textContent = "Registration successful!";
       msg.className = "success";
 
-      // Reset form
       form.reset();
+      agePreview.textContent = "";
+
+      displayUsers();
     });
 
-    // Auto-fill if stored data exists
-    window.onload = () => {
-      const saved = JSON.parse(localStorage.getItem("user"));
-      if (saved) {
-        document.getElementById("name").value = saved.name;
-        document.getElementById("dob").value = saved.dob;
-        document.getElementById("email").value = saved.email;
-        msg.textContent = "Loaded saved registration data.";
-        msg.className = "success";
-      }
-    };
+    function displayUsers() {
+      const users = JSON.parse(localStorage.getItem("users")) || [];
+      tbody.innerHTML = "";
+      users.forEach(user => {
+        const row = `<tr>
+          <td>${user.name}</td>
+          <td>${user.age}</td>
+          <td>${user.gender}</td>
+          <td>${user.phone}</td>
+          <td>${user.email}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    window.onload = displayUsers;
   </script>
 
 </body>
